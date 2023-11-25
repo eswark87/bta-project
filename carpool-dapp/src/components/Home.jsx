@@ -27,64 +27,6 @@ const Home = () => {
           width: '100%',
         }}
       >
-        <nav style={{ display: 'flex', justifyContent: 'center' }}>
-          <Link
-            to="/offer-ride"
-            style={{
-              textDecoration: 'none',
-              margin: '0 10px',
-              color: 'white',
-              padding: '8px 15px',
-              border: '2px solid white',
-              borderRadius: '5px',
-              transition: 'background-color 0.3s, color 0.3s',
-            }}
-          >
-            Offer a Ride
-          </Link>
-          <Link
-            to="/register-ride"
-            style={{
-              textDecoration: 'none',
-              margin: '0 10px',
-              color: 'white',
-              padding: '8px 15px',
-              border: '2px solid white',
-              borderRadius: '5px',
-              transition: 'background-color 0.3s, color 0.3s',
-            }}
-          >
-            Register for a Ride
-          </Link>
-          <Link
-            to="/complete-ride"
-            style={{
-              textDecoration: 'none',
-              margin: '0 10px',
-              color: 'white',
-              padding: '8px 15px',
-              border: '2px solid white',
-              borderRadius: '5px',
-              transition: 'background-color 0.3s, color 0.3s',
-            }}
-          >
-            Complete a Ride
-          </Link>
-          <Link
-            to="/pay-for-ride"
-            style={{
-              textDecoration: 'none',
-              margin: '0 10px',
-              color: 'white',
-              padding: '8px 15px',
-              border: '2px solid white',
-              borderRadius: '5px',
-              transition: 'background-color 0.3s, color 0.3s',
-            }}
-          >
-            Pay for a Ride
-          </Link>
-        </nav>
       </header>
 
       <div
@@ -136,8 +78,3 @@ const Home = () => {
 };
 
 export default Home;
-
-
-
-
-

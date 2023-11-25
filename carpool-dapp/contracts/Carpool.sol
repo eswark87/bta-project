@@ -1,7 +1,8 @@
-// SPDX-License-Identifier: MIT
+//SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "./CarpoolToken.sol";
 
 contract Carpool {
     address public tokenAddress; // Address of the ERC-20 token contract
@@ -13,7 +14,9 @@ contract Carpool {
         uint256 tokenCost;
         uint256 registrationDeadline;
         address[] passengers;
-        mapping(address => bool) payments;
+        string destination;
+        string departure;
+        bool complete;
     }
 
     Ride[] public rides;
@@ -37,17 +40,14 @@ contract Carpool {
         _;
     }
 
-    modifier notRegistered(uint256 _rideIndex) {
-        require(!rides[_rideIndex].payments[msg.sender], "Already registered for this ride");
-        _;
-    }
+    CarpoolToken public myToken;
 
     constructor(address _tokenAddress) {
-        tokenAddress = _tokenAddress;
+        myToken = CarpoolToken(_tokenAddress);
         owner = msg.sender;
     }
 
-    function offerRide(uint256 _availableSeats, uint256 _tokenCost, uint256 _registrationDeadline) external {
+    function offerRide(string memory _departure, string memory _destination, uint256 _availableSeats, uint256 _tokenCost, uint256 _registrationDeadline) external {
         require(_availableSeats > 0, "Invalid number of seats");
         require(_tokenCost > 0, "Invalid token cost");
 
@@ -55,48 +55,62 @@ contract Carpool {
         newRide.driver = msg.sender;
         newRide.availableSeats = _availableSeats;
         newRide.tokenCost = _tokenCost;
+        newRide.departure = _departure;
+        newRide.destination = _destination;
         newRide.registrationDeadline = _registrationDeadline;
-
+        newRide.complete = false;
         emit RideOffered(rides.length - 1, msg.sender, _availableSeats, _tokenCost, _registrationDeadline);
     }
 
-    function registerForRide(uint256 _rideIndex) external rideExists(_rideIndex) registrationOpen(_rideIndex) notRegistered(_rideIndex) {
+    function registerForRide(uint256 _rideIndex) external rideExists(_rideIndex) registrationOpen(_rideIndex) {
         Ride storage ride = rides[_rideIndex];
         require(ride.availableSeats > 0, "No available seats");
-
-        // Transfer tokens to the contract as registration
-        require(IERC20(tokenAddress).transferFrom(msg.sender, address(this), ride.tokenCost), "Token transfer failed");
-
-        // Update ride information
+        myToken.transferTokens(msg.sender, ride.driver, ride.tokenCost);
         ride.passengers.push(msg.sender);
         ride.availableSeats--;
-
         emit RideRegistered(_rideIndex, msg.sender);
     }
 
-    function completeRide(uint256 _rideIndex) external rideExists(_rideIndex) onlyOwner {
+    function completeRide(uint256 _rideIndex) external rideExists(_rideIndex) {
         Ride storage ride = rides[_rideIndex];
         require(block.timestamp >= ride.registrationDeadline, "Registration deadline not reached");
-
-        // Ensure all registered passengers have paid
-        require(ride.availableSeats == 0, "Ride is not fully booked");
-        for (uint256 i = 0; i < ride.passengers.length; i++) {
-            require(ride.payments[ride.passengers[i]], "Not all passengers have paid");
-        }
-
-        // Perform any additional logic for completing the ride
-
+        ride.complete = true;
         emit RideCompleted(_rideIndex);
     }
 
-    function payForRide(uint256 _rideIndex) external rideExists(_rideIndex) {
-        Ride storage ride = rides[_rideIndex];
-        require(!ride.payments[msg.sender], "Already paid for this ride");
+    struct FlattenedRide {
+        address driver;
+        uint256 availableSeats;
+        uint256 tokenCost;
+        uint256 registrationDeadline;
+        address[] passengers;
+        string destination;
+        string departure;
+        bool complete;
+    }
 
-        // Transfer tokens to the driver as payment
-        require(IERC20(tokenAddress).transfer(ride.driver, ride.tokenCost), "Token transfer failed");
+    function getAllRides() external view returns (FlattenedRide[] memory) {
+        FlattenedRide[] memory flattenedRides = new FlattenedRide[](rides.length);
+        for (uint256 i = 0; i < rides.length; i++) {
+            flattenedRides[i] = FlattenedRide({
+                driver: rides[i].driver,
+                availableSeats: rides[i].availableSeats,
+                tokenCost: rides[i].tokenCost,
+                registrationDeadline: rides[i].registrationDeadline,
+                passengers: rides[i].passengers,
+                destination: rides[i].destination,
+                departure: rides[i].departure,
+                complete: rides[i].complete
+            });
+        }
+        return flattenedRides;
+    }
 
-        // Update payment status
-        ride.payments[msg.sender] = true;
+    function getBalance(address user) public view returns (uint256) {
+        return myToken.balanceOf(user);
+    }
+
+    function addTokens() public {
+        myToken.mint(msg.sender, 1000);
     }
 }

@@ -2,6 +2,9 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ethers } from 'ethers';
+import Carpool from '../contracts/Carpool.json';
+const { ethereum } = window;
 
 const OfferRide = () => {
   const navigate = useNavigate();
@@ -13,6 +16,9 @@ const OfferRide = () => {
     registrationDeadline: '',
   });
 
+  const [error, setError] = useState('');
+  const [gasPrice, setGasPrice] = useState('');
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm({
@@ -21,12 +27,81 @@ const OfferRide = () => {
     });
   };
 
-  const handleSubmit = (e) => {
+  function convertDateTimeLocalToUnix(datetimeLocalValue) {
+    const datetime = new Date(datetimeLocalValue);
+    const unixTimestamp = Math.floor(datetime.getTime() / 1000);
+    return unixTimestamp;
+  }
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     console.log('Form submitted:', form);
+    try {
 
+      setError('');
+      const {
+        departure,
+        destination,
+        seatsAvailable,
+        tokenCost,
+        registrationDeadline,
+      } = form;
+
+      if (!departure || !destination || !seatsAvailable || !tokenCost || !registrationDeadline) {
+        setError('All fields are required.');
+        return;
+      }
+
+      if (!ethereum) {
+        setError('Please install and connect to a Web3 provider (e.g., MetaMask) to create an event.');
+        return;
+      }
+
+      await ethereum.request({ method: 'eth_requestAccounts' });
+
+      const provider = new ethers.providers.Web3Provider(ethereum);
+      const signer = provider.getSigner();
+
+      const contractAddress = '0x56285503CB1eb1e8D471d659528325C55bdAec27';
+      const contractABI = Carpool.abi;
+      const contract = new ethers.Contract(contractAddress, contractABI, signer);
+
+      const deadline = convertDateTimeLocalToUnix(registrationDeadline);
+
+      const estimatedGasPrice = await provider.getGasPrice();
+      setGasPrice(estimatedGasPrice.toString());
+
+      const transaction = await contract.offerRide(departure, destination, seatsAvailable, tokenCost, deadline, {
+        gasLimit: 600000,
+        gasPrice: estimatedGasPrice,
+      });
+      console.log('Transaction sent:', transaction);
+
+      const receipt = await transaction.wait();
+      console.log('Transaction receipt:', receipt);
+
+      if (receipt.status === 1) {
+        alert('Event created successfully.');
+        console.log('Ride create successfully');
+      } else {
+        console.error('Event creation failed. Transaction reverted.');
+      }
+
+      setForm({
+        departure: '',
+        destination: '',
+        seatsAvailable: '',
+        tokenCost: '',
+        registrationDeadline: '',
+      });
+
+      navigate('/register-ride', { state: { formData: form } });
+    }catch (error) {
+      console.log('Error creating the event:', error);
+      setError(`Error creating the event.`);
+    }
+    console.log('Errors:', error);
     // Navigate to RegisterRide page and pass form values as props
-    navigate('/register-ride', { state: { formData: form } });
   };
 
 
@@ -35,8 +110,6 @@ const OfferRide = () => {
       <header style={{ backgroundColor: '#333', padding: '10px', color: 'white', textAlign: 'center' }}>
         <h1>Offer a Ride</h1>
         <nav style={{ display: 'flex', justifyContent: 'center', marginTop: '10px' }}>
-          <button style={{ margin: '0 10px' }}>Dummy Button 1</button>
-          <button style={{ margin: '0 10px' }}>Dummy Button 2</button>
         </nav>
       </header>
 
@@ -126,10 +199,3 @@ const OfferRide = () => {
 };
 
 export default OfferRide;
-
-
-
-
-
-
-

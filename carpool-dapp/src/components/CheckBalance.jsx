@@ -1,21 +1,20 @@
-// src/components/RegisterRide.js
-
+// CheckBalance.jsx
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { ethers } from 'ethers';
 import Carpool from '../contracts/Carpool.json';
-import EachRide from './EachRide';
 
+const CheckBalance = () => {
+  const [accountBalance, setAccountBalance] = useState(0); // Placeholder balance
+  const [error, setError] = useState('');
 
-const RegisterRide = () => {
   const location = useLocation();
   const formData = location.state ? location.state.formData : null;
-  const [data, setData] = useState([]);
-  const [error, setError] = useState('');
   const [userAddress, setUserAddress] = useState('');
 
   const contractAddress = '0x56285503CB1eb1e8D471d659528325C55bdAec27';
   const contractABI = Carpool.abi;
+  const [rideIndex, setRideIndex] = React.useState(0);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -42,9 +41,9 @@ const RegisterRide = () => {
         if (userAddress) {
           const provider = new ethers.providers.Web3Provider(window.ethereum);
           const contract = new ethers.Contract(contractAddress, contractABI, provider);
-          const result = await contract.getAllRides();
+          const result = await contract.getBalance(userAddress);
           console.log('Result', result);
-          setData(result);
+          setAccountBalance(result);
         }
       } catch (error) {
         console.log('Error fetching user events:', error);
@@ -58,30 +57,42 @@ const RegisterRide = () => {
     }
   }, [userAddress, contractABI]);
 
+  const styles = {
+    checkBalanceContainer: {
+      maxWidth: '600px',
+      margin: '50px auto',
+      padding: '20px',
+      border: '1px solid #ddd',
+      borderRadius: '8px',
+      textAlign: 'center',
+    },
+    heading: {
+      color: '#333',
+    },
+    paragraph: {
+      color: '#666',
+    },
+    balanceDisplay: {
+      marginTop: '20px',
+    },
+    balanceText: {
+      color: '#333',
+    },
+  };
+
   return (
-    <div style={{ fontFamily: 'Arial, sans-serif', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <header style={{ backgroundColor: '#333', padding: '10px', color: 'white', textAlign: 'center' }}>
-        <h1>Available Rides</h1>
-      </header>
-
-      <main style={{ flex: 1, padding: '20px' }}>
-      
-        {data.map((ride, index) => (
-            <EachRide index={index} ride={ride} user={userAddress}/>
-        ))}
-      </main>
-
-      <footer style={{ backgroundColor: '#333', padding: '10px', color: 'white', textAlign: 'center', marginTop: 'auto' }}>
-        <nav style={{ display: 'flex', justifyContent: 'center', marginTop: '10px' }}>
-          <button style={{ margin: '0 10px' }}>Dummy Option 1</button>
-          <button style={{ margin: '0 10px' }}>Dummy Option 2</button>
-        </nav>
-      </footer>
+    <div style={styles.checkBalanceContainer}>
+      <h2 style={styles.heading}>Your Account Balance</h2>
+      <p style={styles.paragraph}>
+        Welcome to the Carpool Way! Your account balance is an essential part of your carpooling
+        journey. Here, you can check your current balance and manage your transactions.
+      </p>
+      <div style={styles.balanceDisplay}>
+        <h3 style={styles.balanceText}>Balance: {Number(accountBalance._hex)} Tokens</h3>
+      </div>
     </div>
   );
 };
 
-export default RegisterRide;
-
-
+export default CheckBalance;
 
